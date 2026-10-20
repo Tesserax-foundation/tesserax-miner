@@ -1,0 +1,234 @@
+name: Release
+
+# Builds the miner for Linux (static, x64 and arm64), macOS (arm64 and x64) and Windows (x64),
+# checks every binary against the reference RandomTESS implementation, and publishes a release
+# with the archives and their SHA-256 when a tag `v<version>` is pushed.
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+permissions:
+  contents: read
+
+env:
+  CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DWITH_OPENCL=OFF -DWITH_CUDA=OFF
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        name: Version
+        run: |
+          version="$(sed -n 's/^#define APP_VERSION *"\(.*\)"/\1/p' src/version.h)"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "tag ${GITHUB_REF_NAME} does not match APP_VERSION ${version} (src/version.h)" >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+  linux:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x64, runner: ubuntu-24.04 }
+          - { arch: arm64, runner: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.runner }}
+    env:
+      NAME: tesserax-miner-${{ needs.version.outputs.version }}-linux-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: scripts/deps
+          key: deps-linux-musl-${{ matrix.arch }}-${{ hashFiles('scripts/tesserax/deps.sh') }}
+      - name: Build (static, musl)
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src -e CMAKE_OPTIONS alpine:3.22 sh -ec '
+            apk add --no-cache build-base cmake curl linux-headers perl
+            [ -f scripts/deps/lib/libuv.a ] || ./scripts/tesserax/deps.sh /src/scripts/deps
+            cmake -S . -B build $CMAKE_OPTIONS -DXMRIG_DEPS=/src/scripts/deps -DBUILD_STATIC=ON
+            cmake --build build -j"$(nproc)"
+            strip build/xmrig'
+          sudo chown -R "$(id -u):$(id -g)" build scripts
+          file build/xmrig
+          file build/xmrig | grep -qE "statically linked|static-pie linked"
+          build/xmrig --version
+      - name: Test against the reference
+        run: python3 tests/rx-tess/stratum.py --xmrig build/xmrig --out shares-linux-${{ matrix.arch }}.txt
+      - name: Package
+        run: |
+          mkdir "$NAME"
+          cp build/xmrig src/config.json LICENSE README.md "$NAME/"
+          tar -czf "$NAME.tar.gz" "$NAME"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: |
+            ${{ env.NAME }}.tar.gz
+            shares-linux-${{ matrix.arch }}.txt
+
+  macos:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: arm64, runner: macos-15 }
+          - { arch: x64, runner: macos-15-intel }
+    runs-on: ${{ matrix.runner }}
+    env:
+      NAME: tesserax-miner-${{ needs.version.outputs.version }}-macos-${{ matrix.arch }}
+      MACOSX_DEPLOYMENT_TARGET: "12.0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: scripts/deps
+          key: deps-macos-${{ matrix.arch }}-${{ hashFiles('scripts/tesserax/deps.sh') }}
+      - name: Dependencies
+        run: '[ -f scripts/deps/lib/libuv.a ] || WITH_HWLOC=0 ./scripts/tesserax/deps.sh "$PWD/scripts/deps"'
+      - name: Build
+        run: |
+          cmake -S . -B build $CMAKE_OPTIONS -DXMRIG_DEPS="$PWD/scripts/deps" -DWITH_HWLOC=OFF
+          cmake --build build -j"$(sysctl -n hw.ncpu)"
+          strip build/xmrig
+          codesign --force --sign - build/xmrig
+          otool -L build/xmrig
+          # Only system libraries may be linked dynamically.
+          if otool -L build/xmrig | tail -n +2 | grep -vE "^\s+/(usr/lib|System/Library)/"; then
+            exit 1
+          fi
+          build/xmrig --version
+      - name: Test against the reference
+        run: python3 tests/rx-tess/stratum.py --xmrig build/xmrig --out shares-macos-${{ matrix.arch }}.txt
+      - name: Package
+        run: |
+          mkdir "$NAME"
+          cp build/xmrig src/config.json LICENSE README.md "$NAME/"
+          tar -czf "$NAME.tar.gz" "$NAME"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: |
+            ${{ env.NAME }}.tar.gz
+            shares-macos-${{ matrix.arch }}.txt
+
+  windows:
+    needs: version
+    runs-on: windows-2025
+    env:
+      NAME: tesserax-miner-${{ needs.version.outputs.version }}-windows-x64
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-libuv
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-hwloc
+            mingw-w64-ucrt-x86_64-python
+            zip
+      - name: Build (static)
+        run: |
+          cmake -S . -B build -G Ninja $CMAKE_OPTIONS -DBUILD_STATIC=ON
+          cmake --build build
+          strip build/xmrig.exe
+          # Only Windows system libraries may be imported.
+          objdump -p build/xmrig.exe | grep "DLL Name" | tee dlls.txt
+          if grep -viE "DLL Name: (kernel32|user32|advapi32|ws2_32|iphlpapi|userenv|psapi|dbghelp|ole32|shell32|crypt32|bcrypt|secur32|gdi32|msvcrt|ucrtbase|ntdll|api-ms-win-[a-z0-9-]+)\.dll" dlls.txt; then
+            exit 1
+          fi
+          build/xmrig.exe --version
+      - name: Test against the reference
+        run: python tests/rx-tess/stratum.py --xmrig build/xmrig.exe --out shares-windows-x64.txt
+      - name: Package
+        run: |
+          mkdir "$NAME"
+          cp build/xmrig.exe src/config.json LICENSE README.md "$NAME/"
+          zip -r "$NAME.zip" "$NAME"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: |
+            ${{ env.NAME }}.zip
+            shares-windows-x64.txt
+
+  # The shares of every binary must match the reference RandomX implementation built with the
+  # RandomTESS configuration of the node.
+  verify:
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Build the reference
+        run: ./tests/rx-tess/build-verify.sh "$PWD/verify"
+      - name: Verify
+        run: ./verify artifacts/shares-*.txt
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [version, verify]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          cd artifacts
+          sha256sum tesserax-miner-* > SHA256SUMS
+          cat SHA256SUMS
+          cat > notes.md <<EOF
+          XMRig ${VERSION%%-*} with the \`rx/tess\` algorithm (RandomTESS) for Tesserax. No developer fee.
+
+          Every binary was checked against the reference RandomTESS implementation of the node.
+
+          | Platform | Archive |
+          |---|---|
+          | Linux x64 (static) | \`tesserax-miner-${VERSION}-linux-x64.tar.gz\` |
+          | Linux arm64 (static) | \`tesserax-miner-${VERSION}-linux-arm64.tar.gz\` |
+          | macOS Apple Silicon | \`tesserax-miner-${VERSION}-macos-arm64.tar.gz\` |
+          | macOS Intel | \`tesserax-miner-${VERSION}-macos-x64.tar.gz\` |
+          | Windows x64 | \`tesserax-miner-${VERSION}-windows-x64.zip\` |
+
+          Check an archive with \`sha256sum -c SHA256SUMS --ignore-missing\`, then:
+
+          \`\`\`
+          ./xmrig -o 127.0.0.1:3333 -u rig1 -a rx/tess
+          \`\`\`
+          EOF
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --title "Tesserax miner $VERSION" --notes-file notes.md \
+            tesserax-miner-* SHA256SUMS

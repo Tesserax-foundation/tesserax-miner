@@ -8,7 +8,21 @@ This is XMRig 6.26.0 with the `rx/tess` algorithm (RandomTESS), the proof of wor
   only: the GPU backends do not implement RandomX v2.
 - The donation level is 0% and cannot be raised: no hashrate is ever diverted to another pool.
 
-Build:
+Download the archive of your platform from the
+[releases](https://github.com/Wayleyy/tesserax-miner/releases) and check it against `SHA256SUMS`:
+
+| Platform | Archive |
+|---|---|
+| Linux x64, arm64 | `tesserax-miner-<version>-linux-<arch>.tar.gz`, static: runs on any distribution |
+| macOS Apple Silicon, Intel | `tesserax-miner-<version>-macos-<arch>.tar.gz`, macOS 12 or later |
+| Windows x64 | `tesserax-miner-<version>-windows-x64.zip` |
+
+The binaries are not notarized: on macOS, allow the miner once with
+`xattr -d com.apple.quarantine xmrig`. Antivirus software often flags miners; the binaries are
+built by the `Release` workflow of this repository from its sources, and every one of them is
+checked against the reference RandomTESS implementation before it is published.
+
+Or build it:
 
 ```bash
 mkdir build && cd build
@@ -25,6 +39,12 @@ tesserax --stratum --author <your address>
 
 Every block found credits the `--author` of the node. On macOS with Homebrew, add
 `-DWITH_HWLOC=OFF -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3)` to `cmake`.
+
+`scripts/tesserax/deps.sh` builds the static dependencies of the releases (OpenSSL, libuv,
+hwloc), each source archive checked against a pinned SHA-256. `tests/rx-tess/` runs the miner
+against a local stratum job and checks its shares with the reference RandomX implementation
+built with the RandomTESS configuration of the node. A release is published when a tag
+`v<APP_VERSION>` is pushed.
 
 The rest of this file is the XMRig README.
 
