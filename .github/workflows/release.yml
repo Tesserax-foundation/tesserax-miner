@@ -152,7 +152,10 @@ jobs:
             zip
       - name: Build (static)
         run: |
-          cmake -S . -B build -G Ninja $CMAKE_OPTIONS -DBUILD_STATIC=ON
+          # The static libuv of MSYS2 waits on addresses (synchronization.lib). GhostRider is not
+          # needed for rx/tess and links hwloc out of order.
+          cmake -S . -B build -G Ninja $CMAKE_OPTIONS -DBUILD_STATIC=ON -DWITH_GHOSTRIDER=OFF \
+            -DCMAKE_CXX_STANDARD_LIBRARIES="-lsynchronization"
           cmake --build build
           strip build/xmrig.exe
           # Only Windows system libraries may be imported.
