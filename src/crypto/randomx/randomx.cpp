@@ -120,6 +120,24 @@ RandomX_ConfigurationYada::RandomX_ConfigurationYada()
 	ArgonIterations = 4;
 }
 
+// RandomTESS: RandomX v2 with its own Argon2 salt and rebalanced pairs of equivalent
+// instructions (IROR_R/IROL_R and FADD_M/FSUB_M).
+RandomX_ConfigurationTesserax::RandomX_ConfigurationTesserax()
+{
+	ArgonSalt = "RandomTESS\x01";
+	ProgramSize = 384;
+
+	RANDOMX_FREQ_IROR_R = 6;
+	RANDOMX_FREQ_IROL_R = 4;
+	RANDOMX_FREQ_FADD_M = 4;
+	RANDOMX_FREQ_FSUB_M = 6;
+
+	Tweak_V2_CFROUND = 1;
+	Tweak_V2_AES = 1;
+	Tweak_V2_PREFETCH = 1;
+	Tweak_V2_COMMITMENT = 1;
+}
+
 RandomX_ConfigurationBase::RandomX_ConfigurationBase()
 	: ArgonIterations(3)
 	, ArgonLanes(1)
@@ -388,6 +406,7 @@ RandomX_ConfigurationArqma RandomX_ArqmaConfig;
 RandomX_ConfigurationGraft RandomX_GraftConfig;
 RandomX_ConfigurationSafex RandomX_SafexConfig;
 RandomX_ConfigurationYada RandomX_YadaConfig;
+RandomX_ConfigurationTesserax RandomX_TesseraxConfig;
 
 alignas(64) RandomX_ConfigurationBase RandomX_CurrentConfig;
 

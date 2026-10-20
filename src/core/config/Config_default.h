@@ -85,15 +85,15 @@ R"===(
         "cn/0": false,
         "cn-lite/0": false
     },
-    "donate-level": 1,
-    "donate-over-proxy": 1,
+    "donate-level": 0,
+    "donate-over-proxy": 0,
     "log-file": null,
     "pools": [
         {
-            "algo": null,
+            "algo": "rx/tess",
             "coin": null,
-            "url": "donate.v2.xmrig.com:3333",
-            "user": "YOUR_WALLET_ADDRESS",
+            "url": "127.0.0.1:3333",
+            "user": "rig1",
             "pass": "x",
             "rig-id": null,
             "nicehash": false,

@@ -84,6 +84,12 @@ std::vector<xmrig::CudaLaunchData> xmrig::CudaConfig::get(const Miner *miner, co
     };
 
     std::vector<CudaLaunchData> out;
+
+    // RandomTESS uses the RandomX v2 changes, which the GPU kernels do not implement.
+    if (algorithm == Algorithm::RX_TESS) {
+        return out;
+    }
+
     const auto &threads = m_threads.get(algorithm);
 
     if (threads.isEmpty()) {

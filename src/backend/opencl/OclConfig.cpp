@@ -129,6 +129,12 @@ rapidjson::Value xmrig::OclConfig::toJSON(rapidjson::Document &doc) const
 std::vector<xmrig::OclLaunchData> xmrig::OclConfig::get(const Miner *miner, const Algorithm &algorithm, const OclPlatform &platform, const std::vector<OclDevice> &devices) const
 {
     std::vector<OclLaunchData> out;
+
+    // RandomTESS uses the RandomX v2 changes, which the GPU kernels do not implement.
+    if (algorithm == Algorithm::RX_TESS) {
+        return out;
+    }
+
     const auto &threads = m_threads.get(algorithm);
 
     if (threads.isEmpty()) {

@@ -215,11 +215,10 @@ void xmrig::Pools::toJSON(rapidjson::Value &out, rapidjson::Document &doc) const
 }
 
 
-void xmrig::Pools::setDonateLevel(int level)
+void xmrig::Pools::setDonateLevel(int)
 {
-    if (level >= kMinimumDonateLevel && level <= 99) {
-        m_donateLevel = level;
-    }
+    // No developer fee in this build (see donate.h).
+    m_donateLevel = kDefaultDonateLevel;
 }
 
 

@@ -1,3 +1,33 @@
+# Tesserax miner
+
+This is XMRig 6.26.0 with the `rx/tess` algorithm (RandomTESS), the proof of work of
+[Tesserax](https://github.com/Wayleyy/tesserax), and **no developer fee**.
+
+- `rx/tess` is RandomX v2 (Monero `rx/2` with the commitment) with the Argon2 salt
+  `RandomTESS\x01` and the instruction frequencies IROR_R 6, IROL_R 4, FADD_M 4, FSUB_M 6. CPU
+  only: the GPU backends do not implement RandomX v2.
+- The donation level is 0% and cannot be raised: no hashrate is ever diverted to another pool.
+
+Build:
+
+```bash
+mkdir build && cd build
+cmake .. -DWITH_OPENCL=OFF -DWITH_CUDA=OFF
+make -j$(nproc)
+```
+
+Start a Tesserax node with its stratum server, then the miner:
+
+```bash
+tesserax --stratum --author <your address>
+./xmrig -o 127.0.0.1:3333 -u rig1 -a rx/tess
+```
+
+Every block found credits the `--author` of the node. On macOS with Homebrew, add
+`-DWITH_HWLOC=OFF -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3)` to `cmake`.
+
+The rest of this file is the XMRig README.
+
 # XMRig
 
 [![Github All Releases](https://img.shields.io/github/downloads/xmrig/xmrig/total.svg)](https://github.com/xmrig/xmrig/releases)
@@ -25,7 +55,7 @@ The preferred way to configure the miner is the [JSON config file](https://xmrig
 * **[Workers](http://workers.xmrig.info)** helps manage your miners via HTTP API.
 
 ## Donations
-* Default donation 1% (1 minute in 100 minutes) can be increased via option `donate-level` or disabled in source code.
+* Upstream XMRig donates 1% of the hashrate by default; this build donates nothing.
 * XMR: `48edfHu7V9Z84YzzMa6fUueoELZ9ZRXq9VetWzYGzKt52XU5xvqgzYnDK9URnRoJMk1j8nLwEVsaSWJ4fhdUyZijBGUicoD`
 
 ## Developers

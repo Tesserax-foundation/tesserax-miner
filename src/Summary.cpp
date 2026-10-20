@@ -171,9 +171,8 @@ static void print_memory(const Config *config)
 
 static void print_threads(const Config *config)
 {
-    Log::print(GREEN_BOLD(" * ") WHITE_BOLD("%-13s") WHITE_BOLD("%s%d%%"),
+    Log::print(GREEN_BOLD(" * ") WHITE_BOLD("%-13s") WHITE_BOLD("%d%%") " no developer fee",
                "DONATE",
-               config->pools().donateLevel() == 0 ? RED_BOLD_S : "",
                config->pools().donateLevel()
                );
 
