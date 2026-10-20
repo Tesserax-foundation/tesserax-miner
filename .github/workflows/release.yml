@@ -155,7 +155,10 @@ jobs:
           # The static libuv of MSYS2 waits on addresses: synchronization.lib, after the default
           # libraries of CMake for MinGW. GhostRider is not needed for rx/tess and links hwloc out
           # of order.
+          # hwloc: the static archive, not the import library of its DLL.
+          test -f /ucrt64/lib/libhwloc.a
           cmake -S . -B build -G Ninja $CMAKE_OPTIONS -DBUILD_STATIC=ON -DWITH_GHOSTRIDER=OFF \
+            -DHWLOC_LIBRARY="$(cygpath -m /ucrt64/lib/libhwloc.a)" \
             -DCMAKE_CXX_STANDARD_LIBRARIES="-lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -lsynchronization"
           cmake --build build
           strip build/xmrig.exe
