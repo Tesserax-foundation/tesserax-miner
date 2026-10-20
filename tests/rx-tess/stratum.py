@@ -82,6 +82,8 @@ def main():
     parser.add_argument("--out", required=True)
     parser.add_argument("--count", type=int, default=32)
     parser.add_argument("--timeout", type=int, default=1200)
+    parser.add_argument("--mode", choices=["light", "fast"], default="light",
+                        help="RandomX mode of the miner: light (256 MiB) or fast (2 GiB)")
     args = parser.parse_args()
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -94,7 +96,7 @@ def main():
     miner = subprocess.Popen(
         [
             args.xmrig, "-o", f"127.0.0.1:{port}", "-u", "test", "-a", "rx/tess",
-            "--threads=2", "--randomx-mode=light", "--no-huge-pages", "--randomx-no-numa",
+            "--threads=2", f"--randomx-mode={args.mode}", "--no-huge-pages", "--randomx-no-numa",
             "--no-color", "--print-time=30", f"--log-file={log}",
         ],
         stdout=subprocess.DEVNULL,

@@ -68,7 +68,9 @@ jobs:
           file build/xmrig | grep -qE "statically linked|static-pie linked"
           build/xmrig --version
       - name: Test against the reference
-        run: python3 tests/rx-tess/stratum.py --xmrig build/xmrig --out shares-linux-${{ matrix.arch }}.txt
+        run: |
+          python3 tests/rx-tess/stratum.py --xmrig build/xmrig --mode light --out shares-linux-${{ matrix.arch }}-light.txt
+          python3 tests/rx-tess/stratum.py --xmrig build/xmrig --mode fast --out shares-linux-${{ matrix.arch }}-fast.txt
       - name: Package
         run: |
           mkdir "$NAME"
@@ -79,7 +81,7 @@ jobs:
           name: linux-${{ matrix.arch }}
           path: |
             ${{ env.NAME }}.tar.gz
-            shares-linux-${{ matrix.arch }}.txt
+            shares-linux-${{ matrix.arch }}-*.txt
 
   macos:
     needs: version
@@ -114,7 +116,9 @@ jobs:
           fi
           build/xmrig --version
       - name: Test against the reference
-        run: python3 tests/rx-tess/stratum.py --xmrig build/xmrig --out shares-macos-${{ matrix.arch }}.txt
+        run: |
+          python3 tests/rx-tess/stratum.py --xmrig build/xmrig --mode light --out shares-macos-${{ matrix.arch }}-light.txt
+          python3 tests/rx-tess/stratum.py --xmrig build/xmrig --mode fast --out shares-macos-${{ matrix.arch }}-fast.txt
       - name: Package
         run: |
           mkdir "$NAME"
@@ -125,7 +129,7 @@ jobs:
           name: macos-${{ matrix.arch }}
           path: |
             ${{ env.NAME }}.tar.gz
-            shares-macos-${{ matrix.arch }}.txt
+            shares-macos-${{ matrix.arch }}-*.txt
 
   windows:
     needs: version
@@ -171,7 +175,9 @@ jobs:
           fi
           build/xmrig.exe --version
       - name: Test against the reference
-        run: python tests/rx-tess/stratum.py --xmrig build/xmrig.exe --out shares-windows-x64.txt
+        run: |
+          python tests/rx-tess/stratum.py --xmrig build/xmrig.exe --mode light --out shares-windows-x64-light.txt
+          python tests/rx-tess/stratum.py --xmrig build/xmrig.exe --mode fast --out shares-windows-x64-fast.txt
       - name: Package
         run: |
           mkdir "$NAME"
@@ -182,7 +188,7 @@ jobs:
           name: windows-x64
           path: |
             ${{ env.NAME }}.zip
-            shares-windows-x64.txt
+            shares-windows-x64-*.txt
 
   # The shares of every binary must match the reference RandomX implementation built with the
   # RandomTESS configuration of the node.
