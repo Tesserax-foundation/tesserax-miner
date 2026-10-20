@@ -7,6 +7,9 @@ This is XMRig 6.26.0 with the `rx/tess` algorithm (RandomTESS), the proof of wor
   `RandomTESS\x01` and the instruction frequencies IROR_R 6, IROL_R 4, FADD_M 4, FSUB_M 6. CPU
   only: the GPU backends do not implement RandomX v2.
 - The donation level is 0% and cannot be raised: no hashrate is ever diverted to another pool.
+- Fixes the light mode of RandomX v2 on x86-64: the JIT of XMRig 6.26.0 reads the dataset in light
+  mode as in v1 (it swaps "ma" and "mx" before modifying the address), so its light mode hashes
+  were wrong for `rx/2` and `rx/tess`. The fast mode was not affected.
 
 Download the archive of your platform from the
 [releases](https://github.com/Wayleyy/tesserax-miner/releases) and check it against `SHA256SUMS`:
