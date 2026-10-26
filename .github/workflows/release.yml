@@ -1,8 +1,10 @@
 name: Release
 
-# Builds the miner for Linux (static, x64 and arm64), macOS (arm64 and x64) and Windows (x64),
-# checks every binary against the reference RandomTESS implementation, and publishes a release
-# with the archives and their SHA-256 when a tag `v<version>` is pushed.
+# Builds the miner for Linux (static, x64 and arm64), macOS (arm64 and x64) and Windows (x64), and
+# drafts a release with the archives and their SHA-256 when a tag `v<version>` is pushed. Nothing
+# here mines: the terms of hosted runners forbid it. The binaries of a draft are checked against
+# the reference RandomTESS implementation on our own machines (tests/rx-tess/run.sh) before the
+# release is published.
 
 on:
   push:
@@ -67,10 +69,6 @@ jobs:
           file build/xmrig
           file build/xmrig | grep -qE "statically linked|static-pie linked"
           build/xmrig --version
-      - name: Test against the reference
-        run: |
-          python3 tests/rx-tess/stratum.py --xmrig build/xmrig --mode light --out shares-linux-${{ matrix.arch }}-light.txt
-          python3 tests/rx-tess/stratum.py --xmrig build/xmrig --mode fast --out shares-linux-${{ matrix.arch }}-fast.txt
       - name: Package
         run: |
           mkdir "$NAME"
@@ -79,9 +77,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: linux-${{ matrix.arch }}
-          path: |
-            ${{ env.NAME }}.tar.gz
-            shares-linux-${{ matrix.arch }}-*.txt
+          path: ${{ env.NAME }}.tar.gz
 
   macos:
     needs: version
@@ -115,10 +111,6 @@ jobs:
             exit 1
           fi
           build/xmrig --version
-      - name: Test against the reference
-        run: |
-          python3 tests/rx-tess/stratum.py --xmrig build/xmrig --mode light --out shares-macos-${{ matrix.arch }}-light.txt
-          python3 tests/rx-tess/stratum.py --xmrig build/xmrig --mode fast --out shares-macos-${{ matrix.arch }}-fast.txt
       - name: Package
         run: |
           mkdir "$NAME"
@@ -127,9 +119,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: macos-${{ matrix.arch }}
-          path: |
-            ${{ env.NAME }}.tar.gz
-            shares-macos-${{ matrix.arch }}-*.txt
+          path: ${{ env.NAME }}.tar.gz
 
   windows:
     needs: version
@@ -174,10 +164,6 @@ jobs:
             exit 1
           fi
           build/xmrig.exe --version
-      - name: Test against the reference
-        run: |
-          python tests/rx-tess/stratum.py --xmrig build/xmrig.exe --mode light --out shares-windows-x64-light.txt
-          python tests/rx-tess/stratum.py --xmrig build/xmrig.exe --mode fast --out shares-windows-x64-fast.txt
       - name: Package
         run: |
           mkdir "$NAME"
@@ -186,29 +172,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: |
-            ${{ env.NAME }}.zip
-            shares-windows-x64-*.txt
-
-  # The shares of every binary must match the reference RandomX implementation built with the
-  # RandomTESS configuration of the node.
-  verify:
-    needs: [linux, macos, windows]
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-      - name: Build the reference
-        run: ./tests/rx-tess/build-verify.sh "$PWD/verify"
-      - name: Verify
-        run: ./verify artifacts/shares-*.txt
+          path: ${{ env.NAME }}.zip
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [version, verify]
+    needs: [version, linux, macos, windows]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -228,7 +196,7 @@ jobs:
           cat > notes.md <<EOF
           XMRig ${VERSION%%-*} with the \`rx/tess\` algorithm (RandomTESS) for Tesserax. No developer fee.
 
-          Every binary was checked against the reference RandomTESS implementation of the node.
+          The binaries were checked against the reference RandomTESS implementation of the node.
 
           | Platform | Archive |
           |---|---|
@@ -244,6 +212,6 @@ jobs:
           ./xmrig -o 127.0.0.1:3333 -u rig1 -a rx/tess
           \`\`\`
           EOF
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft \
             --title "Tesserax miner $VERSION" --notes-file notes.md \
             tesserax-miner-* SHA256SUMS

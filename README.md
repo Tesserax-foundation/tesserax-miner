@@ -47,8 +47,9 @@ Every block found credits the `--author` of the node. On macOS with Homebrew, ad
 hwloc), each source archive checked against a pinned SHA-256. `tests/rx-tess/` runs the miner
 against a local stratum job and checks its shares with the reference RandomX implementation
 built with the RandomTESS configuration of the node: `tests/rx-tess/run.sh` runs it on one's own
-machine, in the light and the fast modes. A release is published when a tag
-`v<APP_VERSION>` is pushed.
+machine, in the light and the fast modes. A tag `v<APP_VERSION>` drafts a release with the
+binaries of every platform; they are checked with `tests/rx-tess/run.sh <xmrig>` on our own
+machines, since the terms of hosted CI runners forbid mining, before the release is published.
 
 The rest of this file is the XMRig README.
 
