@@ -1,7 +1,7 @@
 # Tesserax miner
 
 This is XMRig 6.26.0 with the `rx/tess` algorithm (RandomTESS), the proof of work of
-[Tesserax](https://github.com/Tesserax-labs/tesserax), and **no developer fee**.
+[Tesserax](https://github.com/Tesserax-foundation/tesserax), and **no developer fee**.
 
 - `rx/tess` is RandomX v2 (Monero `rx/2` with the commitment) with the Argon2 salt
   `RandomTESS\x01` and the instruction frequencies IROR_R 6, IROL_R 4, FADD_M 4, FSUB_M 6. CPU
@@ -12,7 +12,7 @@ This is XMRig 6.26.0 with the `rx/tess` algorithm (RandomTESS), the proof of wor
   were wrong for `rx/2` and `rx/tess`. The fast mode was not affected.
 
 Download the archive of your platform from the
-[releases](https://github.com/Tesserax-labs/tesserax-miner/releases) and check it against `SHA256SUMS`:
+[releases](https://github.com/Tesserax-foundation/tesserax-miner/releases) and check it against `SHA256SUMS`:
 
 | Platform | Archive |
 |---|---|
