@@ -46,7 +46,8 @@ Every block found credits the `--author` of the node. On macOS with Homebrew, ad
 `scripts/tesserax/deps.sh` builds the static dependencies of the releases (OpenSSL, libuv,
 hwloc), each source archive checked against a pinned SHA-256. `tests/rx-tess/` runs the miner
 against a local stratum job and checks its shares with the reference RandomX implementation
-built with the RandomTESS configuration of the node. A release is published when a tag
+built with the RandomTESS configuration of the node: `tests/rx-tess/run.sh` runs it on one's own
+machine, in the light and the fast modes. A release is published when a tag
 `v<APP_VERSION>` is pushed.
 
 The rest of this file is the XMRig README.
